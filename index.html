@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>찰칵! AI 영양사</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        h1 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        p.subtitle {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        /* 거대한 사진 찍기 버튼 */
+        .camera-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 40px 20px;
+            font-size: 28px;
+            font-weight: bold;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .camera-btn:active {
+            transform: scale(0.95);
+        }
+        /* 실제 파일 업로드 인풋은 숨김처리 (버튼으로 대신 클릭) */
+        #file-input {
+            display: none;
+        }
+        /* 로딩 화면 */
+        #loading {
+            display: none;
+            font-size: 24px;
+            font-weight: bold;
+            color: #555;
+            margin-top: 30px;
+        }
+        /* 결과 화면 영역 */
+        #result-area {
+            display: none;
+            width: 100%;
+            max-width: 400px;
+            margin-top: 30px;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+        #preview-img {
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        #food-name {
+            font-size: 26px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        /* 신호등 상태 표시 */
+        .status-badge {
+            display: inline-block;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 20px;
+        }
+        .status-green { background-color: #4CAF50; } /* 안전 */
+        .status-yellow { background-color: #FFC107; color: black; } /* 주의 */
+        .status-red { background-color: #F44336; } /* 경고 */
+        
+        #ai-message {
+            font-size: 22px;
+            line-height: 1.5;
+            color: #333;
+            word-break: keep-all;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>찰칵! AI 영양사</h1>
+    <p class="subtitle">어르신, 드실 식단을 찍어주세요!</p>
+
+    <button class="camera-btn" onclick="document.getElementById('file-input').click()">
+        📸 밥상 사진 찍기
+    </button>
+    <input type="file" id="file-input" accept="image/*" capture="camera" onchange="uploadImage(event)">
+
+    <div id="loading">
+        ⏳ AI가 밥상을<br>분석하고 있어요...
+    </div>
+
+    <div id="result-area">
+        <img id="preview-img" src="" alt="찍은 사진">
+        <div id="food-name">음식 이름</div>
+        <div id="status-badge" class="status-badge status-green">안전해요</div>
+        <div id="ai-message">여기에 AI의 다정한 조언이 나옵니다.</div>
+    </div>
+
+    <script>
+        async function uploadImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // 1. 화면 업데이트 (버튼 숨기고, 로딩 보여주고, 미리보기 세팅)
+            document.querySelector('.camera-btn').style.display = 'none';
+            document.getElementById('result-area').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+
+            const previewUrl = URL.createObjectURL(file);
+            document.getElementById('preview-img').src = previewUrl;
+
+            // 2. 서버로 보낼 데이터 준비
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                // 3. FastAPI 서버(백엔드)로 사진 전송!
+                const response = await fetch('http://127.0.0.1:8000/api/v1/analyze-food', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('서버 에러가 발생했습니다.');
+
+                const data = await response.json();
+                const aiResult = data.ai_analysis;
+
+                // 4. 로딩 숨기고 결과 화면 보여주기
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('result-area').style.display = 'block';
+                document.querySelector('.camera-btn').style.display = 'block'; // 다시 찍기 버튼 활성화
+                document.querySelector('.camera-btn').innerText = '📸 다른 사진 찍기';
+
+                // 5. AI 데이터를 화면에 예쁘게 입히기
+                document.getElementById('food-name').innerText = aiResult.food_name;
+                document.getElementById('ai-message').innerText = aiResult.message;
+
+                // 색상 신호등 적용
+                const badge = document.getElementById('status-badge');
+                badge.className = 'status-badge'; // 기존 클래스 초기화
+                
+                if (aiResult.status.toLowerCase() === 'green') {
+                    badge.classList.add('status-green');
+                    badge.innerText = '🟢 드셔도 좋아요';
+                } else if (aiResult.status.toLowerCase() === 'yellow') {
+                    badge.classList.add('status-yellow');
+                    badge.innerText = '🟡 조금만 드세요';
+                } else if (aiResult.status.toLowerCase() === 'red') {
+                    badge.classList.add('status-red');
+                    badge.innerText = '🔴 혈당에 위험해요!';
+                }
+
+            } catch (error) {
+                alert("앗! 서버와 연결할 수 없어요. 서버가 켜져 있는지 확인해 주세요.");
+                document.getElementById('loading').style.display = 'none';
+                document.querySelector('.camera-btn').style.display = 'block';
+            }
+        }
+    </script>
+
+</body>
+</html>
