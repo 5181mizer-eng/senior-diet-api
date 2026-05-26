@@ -8,8 +8,8 @@ from datetime import datetime
 import json
 
 # 1. Gemini API 설정 (본인의 API 키로 변경하세요)
-GEMINI_API_KEY = "AIzaSyAVVRBP3BwTyp-vn0RBkwRc39dOUVV1l9g"
-genai.configure(api_key=GEMINI_API_KEY)
+import os
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # 최신 시각 분석 모델인 gemini-1.5-flash 사용 (속도가 빠르고 비용이 저렴함)
 model = genai.GenerativeModel('gemini-3.5-flash')
