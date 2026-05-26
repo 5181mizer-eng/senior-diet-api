@@ -139,7 +139,7 @@
 
             try {
                 // 3. FastAPI 서버(백엔드)로 사진 전송!
-                const response = await fetch('https://senior-diet-api.vercel.app/api/v1/analyze-food', {
+                const response = await fetch('https://senior-diet-api-production.up.railway.app/analyze-food', {
                     method: 'POST',
                     body: formData
                 });
